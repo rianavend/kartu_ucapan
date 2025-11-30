@@ -1,0 +1,305 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Birthday Game</title>
+
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css" />
+  <script src="https://cdn.jsdelivr.net/npm/@tsparticles/confetti@3.0.3/tsparticles.confetti.bundle.min.js"></script>
+
+  <style>
+    body {
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system;
+      margin: 0;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background-image: url('https://wallpapers.com/images/hd/happy-birthday-party-banner-background-b7zmirlhuxcfj89a.jpg');
+      background-size: cover;
+      background-position: center;
+      padding: 24px;
+    }
+
+    #kartu {
+      width: 100%;
+      max-width: 720px;
+      background: rgba(255,255,255,0.95);
+      border-radius: 18px;
+      padding: 28px;
+      box-shadow: 0 10px 30px rgba(2,6,23,0.15);
+      border: 4px solid rgba(156,163,175,0.18);
+    }
+
+    #game-board {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 14px;
+      margin-top: 18px;
+    }
+
+    .card {
+      width: 86px;
+      height: 86px;
+      perspective: 900px;
+      cursor: pointer;
+    }
+    .inner {
+      position: relative;
+      width: 100%;
+      height: 100%;
+      transition: transform 0.55s;
+      transform-style: preserve-3d;
+      border-radius: 12px;
+    }
+    .flipped .inner {
+      transform: rotateY(180deg);
+    }
+    .face {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      backface-visibility: hidden;
+      font-size: 2rem;
+      border-radius: 12px;
+      box-shadow: 0 6px 14px rgba(2,6,23,0.12);
+    }
+    .face.back {
+      background: linear-gradient(180deg,#3b82f6,#2563eb);
+      color: white;
+    }
+    .face.front {
+      background: white;
+      transform: rotateY(180deg);
+    }
+  </style>
+</head>
+
+<body>
+
+<div id="kartu" class="animate__animated animate__backInDown">
+
+  <!-- INTRO NPC -->
+  <div id="card-intro" class="text-center relative">
+
+    <img id="npc-img"
+      class="mx-auto w-64 drop-shadow-xl animate__animated animate__fadeInUp">
+
+    <div id="dialog-box"
+         class="mt-4 bg-white p-4 rounded-xl shadow-md border border-gray-300 animate__animated animate__fadeIn">
+      <p id="dialog-text" class="text-lg font-medium text-gray-800"></p>
+    </div>
+
+    <p class="mt-3 text-sm text-gray-700 animate__animated animate__pulse animate__infinite">
+      Tap layar untuk lanjut...
+    </p>
+
+  </div>
+
+  <!-- GAME -->
+  <div id="game-container" class="hidden">
+
+    <div class="flex justify-between items-center">
+      <h2 class="text-xl font-semibold">Find all pairs — Birthday Game</h2>
+      <div class="text-sm text-gray-600">Matches: <span id="score">0</span>/8</div>
+    </div>
+
+    <div id="game-board" class="mt-6"></div>
+
+    <div class="mt-4 flex gap-3 justify-center">
+      <button id="resetBtn" class="px-4 py-2 bg-slate-700 text-white rounded-lg hover:bg-slate-900">Reset</button>
+      <button id="quitBtn" class="px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-700">Kembali</button>
+    </div>
+  </div>
+
+  <!-- MESSAGE -->
+  <div id="message" class="hidden mt-6 text-center animate__animated">
+    <h2 class="text-2xl font-semibold">Selamat! 🎉</h2>
+    <p class="mt-2 text-gray-700">
+      selamat ulang tahun!!! 🎂  
+      "pesan telah di hapus" ✨
+    </p>
+    <div class="mt-4">
+      <button id="closeBtn" class="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-800">Tutup</button>
+    </div>
+  </div>
+
+</div>
+
+<!-- SCRIPT -->
+<script>
+  const cardIntro = document.getElementById("card-intro");
+  const gameContainer = document.getElementById("game-container");
+  const gameBoard = document.getElementById("game-board");
+  const message = document.getElementById("message");
+  const scoreEl = document.getElementById("score");
+  const resetBtn = document.getElementById("resetBtn");
+  const quitBtn = document.getElementById("quitBtn");
+  const closeBtn = document.getElementById("closeBtn");
+
+  const npcImgEl = document.getElementById("npc-img");
+
+  // 4 gambar dari Tuan Andy
+  const npcImages = [
+    "https://static.vecteezy.com/system/resources/previews/045/154/442/non_2x/cartoon-surprised-cat-png.png",
+    "https://static.vecteezy.com/system/resources/previews/045/287/550/original/sticker-of-a-talking-cat-cartoon-png.png",
+    "https://c8.alamy.com/comp/KY129N/cartoon-happy-cat-KY129N.jpg",
+    "https://static.vecteezy.com/system/resources/previews/040/300/786/non_2x/cartoon-happy-cat-png.png"
+  ];
+
+  // Dialog NPC
+  const npcDialog = [
+    "ww.. we.. wehh be..bene..beneran di bu..bukaa!!",
+    "hmm ga bermaksud apa-apa sii cuma sayang aja ga dikirim...",
+    "Desa ini hampir hancur tanpa kepemimpinanmu...",
+    "Ayo, aku antar kamu ke markas!"
+  ];
+
+  let dialogIndex = 0;
+  const dialogTextEl = document.getElementById("dialog-text");
+
+  npcImgEl.src = npcImages[0];
+  dialogTextEl.textContent = npcDialog[0];
+
+  // TAP SCREEN
+  document.addEventListener("click", () => {
+
+    if (!gameContainer.classList.contains("hidden")) return;
+
+    dialogIndex++;
+
+    // Jika masih ada dialog berikutnya
+    if (dialogIndex < npcDialog.length) {
+      dialogTextEl.textContent = npcDialog[dialogIndex];
+      npcImgEl.src = npcImages[dialogIndex];
+      return;
+    }
+
+    // === TAP SETELAH DIALOG TERAKHIR → MASUK GAME ===
+    if (dialogIndex === npcDialog.length) {
+
+      cardIntro.classList.add("animate__fadeOutUp");
+
+      setTimeout(() => {
+        cardIntro.classList.add("hidden");
+
+        gameContainer.classList.remove("hidden");
+        gameContainer.classList.add("animate__fadeInDown");
+
+        // game langsung mulai
+        buildBoard();
+
+      }, 500);
+    }
+  });
+
+  // GAME LOGIC
+  const baseEmojis = ['🎂','🎈','🎁','🕯️','🎉','💝','🍰','🎊'];
+  let emojis = [];
+  let flipped = [];
+  let matchedPairs = 0;
+  let busy = false;
+
+  function fireConfetti(times = 1) {
+    for (let i = 0; i < times; i++) {
+      setTimeout(() => {
+        confetti({ particleCount: 160, spread: 120, origin: { y: 0.6 } });
+      }, i * 300);
+    }
+  }
+
+  function shuffle(arr) {
+    for (let i = arr.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [arr[i], arr[j]] = [arr[j], arr[i]];
+    }
+    return arr;
+  }
+
+  function buildBoard() {
+    gameBoard.innerHTML = '';
+    emojis = shuffle([...baseEmojis, ...baseEmojis]);
+    matchedPairs = 0;
+    scoreEl.textContent = matchedPairs;
+    flipped = [];
+    busy = false;
+
+    emojis.forEach((emo) => {
+      const card = document.createElement('div');
+      card.className = 'card';
+      card.dataset.emoji = emo;
+
+      card.innerHTML = `
+        <div class="inner">
+          <div class="face front">${emo}</div>
+          <div class="face back">🎁</div>
+        </div>
+      `;
+
+      card.addEventListener('click', () => {
+        if (busy || card.classList.contains('flipped')) return;
+
+        card.classList.add('flipped');
+        flipped.push(card);
+
+        if (flipped.length === 2) {
+          busy = true;
+
+          const [a, b] = flipped;
+
+          if (a.dataset.emoji === b.dataset.emoji) {
+            matchedPairs++;
+            scoreEl.textContent = matchedPairs;
+            flipped = [];
+            busy = false;
+
+            if (matchedPairs === baseEmojis.length) {
+              setTimeout(() => {
+                fireConfetti(4);
+                message.classList.remove("hidden");
+                message.classList.add("animate__zoomIn");
+              }, 500);
+            }
+
+          } else {
+            setTimeout(() => {
+              flipped.forEach(c => c.classList.remove('flipped'));
+              flipped = [];
+              busy = false;
+            }, 900);
+          }
+        }
+      });
+
+      gameBoard.appendChild(card);
+    });
+  }
+
+  resetBtn.addEventListener('click', () => {
+    buildBoard();
+    message.classList.add('hidden');
+  });
+
+  quitBtn.addEventListener('click', () => {
+    gameContainer.classList.add("animate__fadeOutUp");
+
+    setTimeout(() => {
+      gameContainer.classList.add("hidden");
+      cardIntro.classList.remove("hidden");
+      dialogIndex = 0;
+      dialogTextEl.textContent = npcDialog[0];
+      npcImgEl.src = npcImages[0];
+    }, 500);
+  });
+
+  closeBtn.addEventListener('click', () => {
+    location.reload();
+  });
+
+</script>
+</body>
+</html>
